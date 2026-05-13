@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>牵牛花词语挑战 - 语音增强版</title>
+    <style>
+        :root {
+            --primary-flower: #9b59b6;
+            --secondary-flower: #8e44ad;
+            --leaf-green: #2ecc71;
+            --bg-color: #f5fdf5;
+            --text-color: #2c3e50;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            touch-action: manipulation;
+        }
+
+        .flower-icon {
+            font-size: 50px;
+            margin-bottom: 10px;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            padding: 20px;
+            border-radius: 25px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border: 4px solid var(--primary-flower);
+            text-align: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #eee;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        #progress-fill {
+            width: 0%;
+            height: 100%;
+            background: var(--leaf-green);
+            border-radius: 5px;
+            transition: width 0.3s;
+        }
+
+        /* 语音按钮样式 */
+        .word-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .word-display {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--secondary-flower);
+        }
+
+        .audio-btn {
+            background: var(--primary-flower);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin: 15px 0 5px;
+            text-transform: uppercase;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .option-btn {
+            background: white;
+            border: 2px solid #ddd;
+            padding: 15px 10px;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .option-btn.selected-correct {
+            background-color: var(--leaf-green);
+            color: white;
+            border-color: var(--leaf-green);
+        }
+
+        .option-btn.selected-wrong {
+            background-color: #e74c3c;
+            color: white;
+            border-color: #e74c3c;
+            animation: shake 0.3s;
+        }
+
+        @keyframes shake {
+            0%, 100% {transform: translateX(0);}
+            25% {transform: translateX(-5px);}
+            75% {transform: translateX(5px);}
+        }
+
+        #next-btn {
+            background: var(--primary-flower);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border-radius: 30px;
+            display: none;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .score-page {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="flower-icon">🌸</div>
+
+    <div id="game-ui" class="game-container">
+        <div class="progress-bar"><div id="progress-fill"></div></div>
+        
+        <div class="word-container">
+            <div class="word-display" id="target-word">加载中...</div>
+            <button class="audio-btn" onclick="speakCurrentWord()" aria-label="播放读音">🔊</button>
+        </div>
+        
+        <div class="section-title">English</div>
+        <div class="options-grid" id="en-options"></div>
+
+        <div class="section-title">Bahasa Melayu</div>
+        <div class="options-grid" id="ms-options"></div>
+
+        <button id="next-btn" onclick="nextQuestion()">下一题 ➔</button>
+    </div>
+
+    <div id="result-ui" class="game-container score-page">
+        <h2>太棒了！🌸</h2>
+        <p>你已经完成了所有的词语练习。</p>
+        <div class="word-display" style="font-size: 3rem; margin: 20px 0;">💯</div>
+        <button id="next-btn" style="display:block" onclick="location.reload()">再玩一次</button>
+    </div>
+
+    <script>
+        const wordList = [
+            { zh: "躺卧", en: ["Lie down", "Stand up"], ms: ["Berbaring", "Berdiri"] },
+            { zh: "攀缘茎", en: ["Climbing stem", "Root"], ms: ["Batang melilit", "Daun"] },
+            { zh: "搏斗", en: ["Struggle", "Sleep"], ms: ["Berjuang", "Menari"] },
+            { zh: "灿烂", en: ["Brilliant", "Dark"], ms: ["Cemerlang", "Gelap"] },
+            { zh: "红霞", en: ["Rosy clouds", "Rain"], ms: ["Awan merah", "Hujan"] },
+            { zh: "栋", en: ["(Classifier for buildings)", "Piece"], ms: ["Buah (penjodoh bilangan)", "Keping"] },
+            { zh: "古堡", en: ["Ancient castle", "New house"], ms: ["Istana lama", "Rumah baru"] },
+            { zh: "坍塌", en: ["Collapse", "Build"], ms: ["Runtuh", "Bina"] },
+            { zh: "砖墙", en: ["Brick wall", "Glass door"], ms: ["Dinding bata", "Pintu kaca"] },
+            { zh: "无可奈何", en: ["Helpless", "Very happy"], ms: ["Tiada pilihan", "Gembira"] },
+            { zh: "晓得", en: ["Know", "Forget"], ms: ["Tahu", "Lupa"] },
+            { zh: "切勿", en: ["Must not", "Please"], ms: ["Jangan", "Sila"] },
+            { zh: "泄气", en: ["Discouraged", "Excited"], ms: ["Putus asa", "Bersemangat"] },
+            { zh: "勃发", en: ["Thriving", "Dying"], ms: ["Berkembang pesat", "Layu"] },
+            { zh: "脱俗", en: ["Refined", "Ordinary"], ms: ["Anggun", "Biasa"] },
+            { zh: "蓬勃", en: ["Flourishing", "Weak"], ms: ["Pesat", "Lemah"] }
+        ];
+
+        let currentIndex = 0;
+        let enCorrect = false;
+        let msCorrect = false;
+
+        // 语音功能函数
+        function speakCurrentWord() {
+            const word = wordList[currentIndex].zh;
+            const utterance = new SpeechSynthesisUtterance(word);
+            utterance.lang = 'zh-CN';
+            utterance.rate = 0.8; // 语速稍慢，方便学生听清
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function initQuestion() {
+            const current = wordList[currentIndex];
+            enCorrect = false;
+            msCorrect = false;
+            document.getElementById('next-btn').style.display = 'none';
+            document.getElementById('target-word').innerText = current.zh;
+            document.getElementById('progress-fill').style.width = `${(currentIndex / wordList.length) * 100}%`;
+
+            renderOptions('en-options', current.en, 'en');
+            renderOptions('ms-options', current.ms, 'ms');
+
+            // 自动朗读单词（部分手机浏览器需要用户交互后才允许自动播放）
+            setTimeout(speakCurrentWord, 500);
+        }
+
+        function renderOptions(containerId, options, type) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            let shuffled = [...options].sort(() => Math.random() - 0.5);
+            
+            shuffled.forEach(text => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = text;
+                btn.onclick = () => checkAnswer(btn, text, options[0], type);
+                container.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(btn, selected, correct, type) {
+            if (selected === correct) {
+                const parent = btn.parentElement;
+                Array.from(parent.children).forEach(b => b.onclick = null);
+                btn.classList.add('selected-correct');
+                if (type === 'en') enCorrect = true;
+                if (type === 'ms') msCorrect = true;
+                
+                if (enCorrect && msCorrect) {
+                    document.getElementById('next-btn').style.display = 'block';
+                }
+            } else {
+                btn.classList.add('selected-wrong');
+                setTimeout(() => btn.classList.remove('selected-wrong'), 500);
+            }
+        }
+
+        function nextQuestion() {
+            currentIndex++;
+            if (currentIndex < wordList.length) {
+                initQuestion();
+            } else {
+                document.getElementById('game-ui').style.display = 'none';
+                document.getElementById('result-ui').style.display = 'block';
+                document.getElementById('progress-fill').style.width = `100%`;
+            }
+        }
+
+        // 初始化
+        initQuestion();
+    </script>
+</body>
+</html>
